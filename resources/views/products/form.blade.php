@@ -19,6 +19,25 @@
     @enderror
 </div>
 
+{{-- Kode barcode --}}
+<div class="mb-3">
+    <label class="form-label" for="barcode">Kode Barang / Barcode</label>
+    <input
+        type="text"
+        name="barcode"
+        id="barcode"
+        class="form-control @error('barcode') is-invalid @enderror"
+        value="{{ old('barcode', $product->barcode ?? '') }}"
+        placeholder="Ketik atau scan barcode barang"
+        maxlength="100"
+        autocomplete="off"
+    >
+    <div class="form-text">Opsional. Scan barcode menggunakan scanner yang terhubung sebagai keyboard.</div>
+    @error('barcode')
+        <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+</div>
+
 
 {{-- Kategori --}}
 <div class="mb-3">

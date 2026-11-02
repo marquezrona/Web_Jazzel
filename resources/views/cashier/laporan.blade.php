@@ -145,7 +145,15 @@
                 <h2 class="h5 mb-1">Transaksi {{ $periodLabel }}</h2>
                 <span class="text-secondary small">Penjualan periode ini: Rp {{ number_format((float) $periodSales, 0, ',', '.') }}</span>
             </div>
-            <span class="text-secondary small">{{ $transactions->total() }} transaksi</span>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <a class="btn btn-sm btn-outline-danger" href="{{ route('cashier.laporan.export.pdf', request()->only(['period', 'date', 'week', 'month', 'year'])) }}">
+                    <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Unduh PDF
+                </a>
+                <a class="btn btn-sm btn-outline-success" href="{{ route('cashier.laporan.export.excel', request()->only(['period', 'date', 'week', 'month', 'year'])) }}">
+                    <i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i>Unduh Excel (.csv)
+                </a>
+                <span class="text-secondary small">{{ $transactions->total() }} transaksi</span>
+            </div>
         </div>
         @if ($transactions->isEmpty())
             <div class="p-5 text-center text-secondary">Belum ada transaksi pada periode ini.</div>

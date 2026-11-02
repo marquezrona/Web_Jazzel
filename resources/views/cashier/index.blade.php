@@ -51,6 +51,10 @@
         .search-area { display: flex; gap: 9px; }
         .search-input { position: relative; flex: 1; min-width: 0; }
         .search-input > i { position: absolute; top: 50%; left: 12px; z-index: 1; transform: translateY(-50%); color: #766d6f; }
+        .barcode-scan { margin-bottom: 12px; }
+        .scan-status { display: block; min-height: 18px; margin-top: 5px; color: #536176; font-size: 12px; }
+        .scan-status.error { color: #b42318; }
+        .scan-status.success { color: #21805d; }
         .pos-view .form-control { width: 100%; height: 42px; padding: 0 11px; border: 1px solid #e5d8d7; border-radius: 8px; color: #3a3334; background: rgba(255,255,255,.96); font-size: 14px; }
         .pos-view .search-input .form-control { padding-left: 35px; }
         .pos-view .form-control:focus { border-color: #b94245; box-shadow: 0 0 0 3px rgba(185,66,69,.18); }
@@ -224,10 +228,18 @@
                                 Belum ada barang aktif dengan stok tersedia. Pastikan barang berstatus aktif dan stoknya lebih dari 0 di Kelola Barang.
                             </div>
                         @endif
+                        <div class="barcode-scan">
+                            <label class="field-label" for="scanBarcode">Scan kode barang</label>
+                            <div class="search-input">
+                                <i class="bi bi-upc-scan" aria-hidden="true"></i>
+                                <input class="form-control" id="scanBarcode" type="text" placeholder="Scan barcode lalu tekan Enter" autocomplete="off" autofocus>
+                            </div>
+                            <span class="scan-status" id="scanStatus" role="status" aria-live="polite">Barang tanpa barcode bisa dicari secara manual di bawah.</span>
+                        </div>
                         <div class="search-area">
                             <div class="search-input">
                                 <i class="bi bi-search"></i>
-                                <input class="form-control" id="searchProduct" type="text" placeholder="Cari nama barang / kategori..." autocomplete="off">
+                                <input class="form-control" id="searchProduct" type="text" placeholder="Cari nama, kategori, atau kode barang..." autocomplete="off">
                                 <div class="product-results" id="productResults"></div>
                             </div>
                             <button class="btn btn-primary" type="button" id="searchButton">Cari Barang</button>
@@ -437,6 +449,8 @@
         let nfcLookupTimeout;
         let activeHeldTransactionId = null;
         const searchInput = document.querySelector('#searchProduct');
+        const barcodeInput = document.querySelector('#scanBarcode');
+        const scanStatus = document.querySelector('#scanStatus');
         const resultsBox = document.querySelector('#productResults');
         const paymentInput = document.querySelector('#payment');
         const memberSelect = document.querySelector('#memberCustomer');
@@ -458,6 +472,13 @@
         let heldTransactions = loadHeldTransactions();
         const currentPaymentMethod = () => paymentButtons.find(button => button.classList.contains('active')).dataset.method;
         const money = (value) => new Intl.NumberFormat('id-ID', { style:'currency', currency:'IDR', maximumFractionDigits:0 }).format(value);
+        const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        })[character]);
         const totalValue = () => { const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0); const fee = Number(document.querySelector('#otherFee').value) || 0; return subtotal + fee; };
         function loadHeldTransactions() {
             try {
@@ -590,8 +611,68 @@
             paymentInput.value = transaction.payment;
             calculateChange();
         }
-        function searchProduct() { const keyword = searchInput.value.toLowerCase().trim(); if (!keyword) { resultsBox.style.display = 'none'; return; } const matches = products.filter(product => `${product.name} ${product.category || 'Umum'} ${product.id}`.toLowerCase().includes(keyword)); resultsBox.innerHTML = matches.length ? matches.map(product => `<div class="product-item" data-product-id="${product.id}"><div><div class="product-name">${product.name}</div><div class="product-meta">${product.category || 'Umum'} - Stok ${product.stock}</div></div><div class="product-price">${money(product.price)}</div></div>`).join('') : '<div class="product-item">Barang tidak ditemukan</div>'; resultsBox.style.display = 'block'; }
-        function addToCart(id) { const product = products.find(item => item.id === id); if (!product || product.stock < 1) return; const existing = cart.find(item => item.id === id); if (existing) { if (existing.qty < product.stock) existing.qty++; } else cart.push({ ...product, qty:1 }); searchInput.value = ''; resultsBox.style.display = 'none'; renderCart(); }
+        function searchProduct() {
+            const keyword = searchInput.value.toLowerCase().trim();
+            if (!keyword) {
+                resultsBox.style.display = 'none';
+                return;
+            }
+
+            const matches = products.filter(product =>
+                `${product.name} ${product.barcode || ''} ${product.category || 'Umum'} ${product.id}`.toLowerCase().includes(keyword)
+            );
+            resultsBox.innerHTML = matches.length ? matches.map(product => {
+                const name = escapeHtml(product.name);
+                const category = escapeHtml(product.category || 'Umum');
+                const barcode = product.barcode ? ` · Kode ${escapeHtml(product.barcode)}` : '';
+
+                return `<div class="product-item" data-product-id="${product.id}"><div><div class="product-name">${name}</div><div class="product-meta">${category}${barcode} - Stok ${product.stock}</div></div><div class="product-price">${money(product.price)}</div></div>`;
+            }).join('') : '<div class="product-item">Barang tidak ditemukan</div>';
+            resultsBox.style.display = 'block';
+        }
+        function addToCart(id) {
+            const product = products.find(item => item.id === id);
+            if (!product || product.stock < 1) return false;
+
+            const existing = cart.find(item => item.id === id);
+            if (existing) {
+                if (existing.qty >= product.stock) return false;
+                existing.qty++;
+            } else {
+                cart.push({ ...product, qty:1 });
+            }
+
+            searchInput.value = '';
+            resultsBox.style.display = 'none';
+            renderCart();
+            return true;
+        }
+        function scanBarcode() {
+            const barcode = barcodeInput.value.trim();
+            if (!barcode) return;
+
+            const product = products.find(item => item.barcode === barcode);
+            if (!product) {
+                scanStatus.textContent = `Kode "${barcode}" tidak ditemukan. Cari barang secara manual.`;
+                scanStatus.className = 'scan-status error';
+                barcodeInput.value = '';
+                searchInput.value = barcode;
+                searchProduct();
+                searchInput.focus();
+                return;
+            }
+
+            if (!addToCart(product.id)) {
+                scanStatus.textContent = `Stok ${product.name} sudah mencapai batas yang tersedia.`;
+                scanStatus.className = 'scan-status error';
+            } else {
+                scanStatus.textContent = `${product.name} berhasil ditambahkan ke keranjang.`;
+                scanStatus.className = 'scan-status success';
+            }
+
+            barcodeInput.value = '';
+            barcodeInput.focus();
+        }
         function renderCart() { const body = document.querySelector('#cartBody'); if (!cart.length) { body.innerHTML = '<tr><td colspan="6" class="empty-cart"><i class="bi bi-basket2"></i>Keranjang masih kosong.<br>Silakan cari atau pilih barang.</td></tr>'; } else body.innerHTML = cart.map((item, index) => `<tr><td>${index + 1}</td><td><strong>${item.name}</strong><div class="product-meta">${item.category || 'Umum'}</div></td><td>${money(item.price)}</td><td><div class="qty-control"><button type="button" data-action="decrease" data-id="${item.id}">-</button><input type="number" min="1" max="${item.stock}" value="${item.qty}" data-action="quantity" data-id="${item.id}"><button type="button" data-action="increase" data-id="${item.id}">+</button></div></td><td class="text-right"><strong>${money(item.price * item.qty)}</strong></td><td><button class="remove-btn" type="button" data-action="remove" data-id="${item.id}">x</button></td></tr>`).join(''); calculateTotal(); }
         function calculateTotal() { const quantity = cart.reduce((sum, item) => sum + item.qty, 0); const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0); document.querySelector('#totalQty').textContent = quantity; document.querySelector('#itemCount').textContent = `${quantity} Item`; document.querySelector('#subtotal').textContent = money(subtotal); document.querySelector('#grandTotal').textContent = money(totalValue()); if (['qris', 'nfc'].includes(currentPaymentMethod())) paymentInput.value = totalValue(); calculateChange(); }
         function calculateChange() {
@@ -673,6 +754,7 @@
                 return null;
             }
         }
+        barcodeInput.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); scanBarcode(); } });
         searchInput.addEventListener('input', searchProduct); document.querySelector('#searchButton').addEventListener('click', searchProduct); paymentInput.addEventListener('input', calculateChange); document.querySelector('#otherFee').addEventListener('input', calculateTotal);
         resultsBox.addEventListener('click', event => { const item = event.target.closest('[data-product-id]'); if (item) addToCart(Number(item.dataset.productId)); });
         document.querySelector('#cartBody').addEventListener('click', event => { const button = event.target.closest('[data-action]'); if (!button) return; const item = cart.find(product => product.id === Number(button.dataset.id)); if (!item) return; if (button.dataset.action === 'increase') item.qty = Math.min(item.stock, item.qty + 1); if (button.dataset.action === 'decrease') item.qty--; if (button.dataset.action === 'remove' || item.qty < 1) cart = cart.filter(product => product.id !== item.id); renderCart(); });

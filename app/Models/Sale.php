@@ -10,6 +10,7 @@ class Sale extends Model
 {
     protected $fillable = [
         'invoice',
+        'client_transaction_id',
         'cashier_id',
         'customer_id',
         'cashier_name',

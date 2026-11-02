@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 
@@ -25,14 +26,15 @@ class ProductController extends Controller
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', "%{$search}%")
-                        ->orWhere('category_id', 'like', "%{$search}%")
+                        ->orWhere('barcode', 'like', "%{$search}%")
+                        ->orWhere('category', 'like', "%{$search}%")
                         ->orWhere('description', 'like', "%{$search}%");
                 });
             })
             ->latest()
-            ->paginate(10);
+            ->get();
 
-        return view('products.index', compact('products'));
+        return view('products.index', compact('products', 'search'));
     }
 
     /**
@@ -48,12 +50,14 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        $request->merge(['barcode' => trim((string) $request->input('barcode', '')) ?: null]);
+
         $data = $request->validate([
             'name'        => 'required|string|max:255',
-            'category_id' => 'nullable|exists:categories,id',
-            'sku'         => 'required|string|max:100|unique:products,sku',
-            'price'       => 'required|numeric',
-            'stock'       => 'required|integer',
+            'barcode'     => ['nullable', 'string', 'max:100', Rule::unique('products', 'barcode')],
+            'category'    => 'nullable|string|max:255',
+            'price'       => 'required|numeric|min:0',
+            'stock'       => 'required|integer|min:0',
             'description' => 'nullable|string',
             'image'       => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048', // max 2MB
             'is_active'   => 'nullable|boolean',
@@ -117,12 +121,14 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
+        $request->merge(['barcode' => trim((string) $request->input('barcode', '')) ?: null]);
+
         $data = $request->validate([
             'name'        => 'required|string|max:255',
-            'category_id' => 'nullable|exists:categories,id',
-            'sku'         => 'required|string|max:100|unique:products,sku,' . $product->id,
-            'price'       => 'required|numeric',
-            'stock'       => 'required|integer',
+            'barcode'     => ['nullable', 'string', 'max:100', Rule::unique('products', 'barcode')->ignore($product->id)],
+            'category'    => 'nullable|string|max:255',
+            'price'       => 'required|numeric|min:0',
+            'stock'       => 'required|integer|min:0',
             'description' => 'nullable|string',
             'image'       => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'is_active'   => 'nullable|boolean',

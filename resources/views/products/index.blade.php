@@ -44,7 +44,7 @@
         .products-search .btn { flex: 0 0 auto; }
         .products-search-hint { color: #766d6f; font-size: 13px; }
         .products-table-wrap { overflow-x: auto; }
-        .products-table { min-width: 760px; }
+        .products-table { min-width: 850px; }
         .products-table thead th { padding-top: 13px; padding-bottom: 13px; }
         .products-table tbody tr { transition: background-color .15s ease; }
         .products-table tbody tr:hover { background: #faf6f5; }
@@ -169,6 +169,7 @@
                         <tr>
                             <th scope="col" style="width: 64px">No.</th>
                             <th scope="col">Barang</th>
+                            <th scope="col">Kode Barang</th>
                             <th scope="col">Kategori</th>
                             <th scope="col">Harga</th>
                             <th scope="col">Stok</th>
@@ -196,6 +197,7 @@
                                         </span>
                                     </div>
                                 </td>
+                                <td>{{ $product->barcode ?: '—' }}</td>
                                 <td>{{ $product->category ?: 'Tanpa kategori' }}</td>
                                 <td class="product-price">Rp {{ number_format($product->price, 0, ',', '.') }}</td>
                                 <td>
@@ -226,7 +228,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="products-empty">
+                                <td colspan="7" class="products-empty">
                                     <i class="bi bi-inbox" aria-hidden="true"></i>
                                     {{ $search !== '' ? 'Barang tidak ditemukan. Coba kata kunci lain.' : 'Belum ada barang yang terdaftar.' }}
                                 </td>

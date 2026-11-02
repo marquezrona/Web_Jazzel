@@ -10,6 +10,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Events\OrderPlaced;
+use App\Models\User;
 
 class StrukController extends Controller
 {
@@ -39,8 +42,13 @@ class StrukController extends Controller
 
             return back()->withErrors([
                 'receipt' => 'Struk gagal dicetak. Periksa printer dan konfigurasi nama printer.',
-            ]);
+                ]);
         }
+
+        // Memicu Event Real-time setelah cetak struk berhasil
+// Ganti baris event Anda menjadi seperti ini:
+event(new OrderPlaced($sale, \Illuminate\Support\Facades\Auth::user()));
+
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -49,5 +57,25 @@ class StrukController extends Controller
         }
 
         return back()->with('status', 'Struk transaksi '.$sale->invoice.' berhasil dicetak.');
+    }
+
+    /**
+     * PERBAIKAN LINE 53: Mengubah tipe parameter dari (Order $order) menjadi (Sale $sale)
+     */
+    public function invoice(Sale $sale)
+    {
+        $sale = Sale::with('items.product')->findOrFail($sale->id);
+        $invoice = $sale;
+
+        foreach ($invoice->items as $item) {
+            if (!isset($item->total)) {
+                $item->total = $item->subtotal ?? ($item->price * $item->quantity);
+            }
+        }
+        
+        $invoice->total = $invoice->total_amount ?? $invoice->total ?? 0;
+
+        $pdf = Pdf::loadView('invoices.invoice', ['invoice' => $invoice]);
+        return $pdf->download('invoice_' . $invoice->id . '.pdf');
     }
 }

@@ -33,5 +33,14 @@
                 {{ $slot }}
             </main>
         </div>
+
+        <!-- Skrip Listener Laravel Echo & Reverb yang Ditambahkan -->
+        <script>
+            window.Echo.private('user.{{ auth()->id() }}')
+                .listen('OrderPlaced', (e) => {
+                    alert(`Order #${e.order_id} telah ditempatkan! Total: Rp ${e.total}`);
+                    console.log('Order Placed:', e);
+                });
+        </script>
     </body>
 </html>

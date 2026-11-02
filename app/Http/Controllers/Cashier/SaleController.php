@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -106,9 +107,23 @@ class SaleController extends Controller
             'paid' => ['required', 'numeric', 'min:0'],
             'payment_method' => ['required', 'in:tunai,qris,transfer,nfc'],
             'card_uid' => ['required_if:payment_method,nfc', 'nullable', 'string', 'max:100', 'regex:/^[A-Z0-9:_-]+$/'],
+            'client_transaction_id' => ['nullable', 'uuid'],
         ]);
 
-        $sale = DB::transaction(function () use ($data, $request): Sale {
+        $clientTransactionId = $data['client_transaction_id'] ?? null;
+        if ($clientTransactionId) {
+            $existingSale = Sale::query()
+                ->where('client_transaction_id', $clientTransactionId)
+                ->where('cashier_id', $request->user()->id)
+                ->first();
+
+            if ($existingSale) {
+                return $this->saleResponse($existingSale, $data);
+            }
+        }
+
+        try {
+            $sale = DB::transaction(function () use ($data, $request, $clientTransactionId): Sale {
             $quantities = collect($data['items'])->keyBy('product_id');
             $products = Product::query()
                 ->whereIn('id', $quantities->keys())
@@ -203,6 +218,7 @@ class SaleController extends Controller
 
             $sale = Sale::query()->create([
                 'invoice' => 'INV-'.now()->format('Ymd').'-'.Str::upper(Str::random(8)),
+                'client_transaction_id' => $clientTransactionId,
                 'cashier_id' => $request->user()->id,
                 'customer_id' => $member?->id,
                 'cashier_name' => $request->user()->name,
@@ -246,8 +262,27 @@ class SaleController extends Controller
             }
 
             return $sale;
-        });
+            });
+        } catch (QueryException $exception) {
+            if (! $clientTransactionId) {
+                throw $exception;
+            }
 
+            $sale = Sale::query()
+                ->where('client_transaction_id', $clientTransactionId)
+                ->where('cashier_id', $request->user()->id)
+                ->first();
+
+            if (! $sale) {
+                throw $exception;
+            }
+        }
+
+        return $this->saleResponse($sale, $data);
+    }
+
+    private function saleResponse(Sale $sale, array $data): JsonResponse
+    {
         $cardBalance = $data['payment_method'] === 'nfc'
             ? NfcCard::query()->where('uid', $data['card_uid'])->value('balance')
             : null;
