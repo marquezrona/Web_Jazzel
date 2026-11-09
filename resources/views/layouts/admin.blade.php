@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @include('partials.pwa-head')
     <title>@yield('title', 'Admin Kasir') - {{ $storeSettings->store_name }}</title>
     <link rel="icon" type="image/png" sizes="256x256" href="{{ asset('assets/img/jazzel-favicon.png?v=2') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -291,6 +292,22 @@
             font-size: 18px;
         }
 
+        .menu-notification {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            margin-left: auto;
+            padding: 0 6px;
+            border-radius: 999px;
+            color: #fff;
+            background: #d64c3d;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
         .workspace-sidebar .menu-link:hover {
             color: #fff;
             background: rgba(255,255,255,.16);
@@ -539,6 +556,7 @@
                     <a class="menu-link {{ request()->routeIs('admin.kasir') ? 'active' : '' }}" href="{{ route('admin.kasir') }}"><i class="bi bi-people"></i>Kelola Kasir</a>
                     <a class="menu-link {{ request()->routeIs('admin.members') ? 'active' : '' }}" href="{{ route('admin.members') }}"><i class="bi bi-person-vcard"></i>Member NFC</a>
                     <a class="menu-link {{ request()->routeIs('admin.laporan') ? 'active' : '' }}" href="{{ route('admin.laporan') }}"><i class="bi bi-bar-chart"></i>Laporan</a>
+                    <a class="menu-link {{ request()->routeIs('admin.stok-rendah') ? 'active' : '' }}" href="{{ route('admin.stok-rendah') }}"><i class="bi bi-exclamation-triangle"></i>Stok Rendah @if(($lowStockMenuCount ?? 0) > 0)<span class="menu-notification" aria-label="{{ $lowStockMenuCount }} barang stok rendah">{{ $lowStockMenuCount }}</span>@endif</a>
                     <a class="menu-link {{ request()->routeIs('admin.pengaturan*') ? 'active' : '' }}" href="{{ route('admin.pengaturan') }}"><i class="bi bi-gear"></i>Pengaturan</a>
                 @else
                     <a class="menu-link {{ request()->routeIs('cashier.index', 'cashier.transaksi') ? 'active' : '' }}" href="{{ route('cashier.index') }}"><i class="bi bi-cart3"></i>Transaksi Baru</a>
@@ -580,6 +598,7 @@
         </div>
     </div>
 
+    <script src="{{ asset('js/register-service-worker.js') }}" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     @stack('scripts')
 </body>

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -57,6 +58,81 @@ class AdminLoginTest extends TestCase
             ->assertSee('Ya, Hapus Barang')
             ->assertDontSee('onsubmit="return confirm', false)
             ->assertDontSee('Status');
+    }
+
+    public function test_dashboard_url_redirects_to_the_dashboard_for_each_user_role(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $cashier = User::factory()->create(['role' => 'kasir']);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('admin.dashboard'));
+
+        $this->actingAs($cashier)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('cashier.index'));
+    }
+
+    public function test_admin_dashboard_counts_only_products_with_stock_below_ten_as_low_stock(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Product::query()->create([
+            'name' => 'Produk Stok Sembilan',
+            'price' => 1000,
+            'stock' => 9,
+            'is_active' => true,
+        ]);
+        Product::query()->create([
+            'name' => 'Produk Stok Sepuluh',
+            'price' => 1000,
+            'stock' => 10,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('<strong class="stat-value">1</strong>', false)
+            ->assertSee('stock-pill low">9 stok', false)
+            ->assertSee('stock-pill ">10 stok', false);
+    }
+
+    public function test_admin_can_view_low_stock_products_from_its_own_menu(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Product::query()->create([
+            'name' => 'Produk Hampir Habis',
+            'price' => 1000,
+            'stock' => 3,
+            'is_active' => true,
+        ]);
+        Product::query()->create([
+            'name' => 'Produk Stok Cukup',
+            'price' => 1000,
+            'stock' => 10,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.stok-rendah'))
+            ->assertOk()
+            ->assertSee('Stok Rendah')
+            ->assertSee('Produk Hampir Habis')
+            ->assertDontSee('Produk Stok Cukup')
+            ->assertSee('href="'.route('admin.stok-rendah').'"', false)
+            ->assertSee('class="menu-notification" aria-label="1 barang stok rendah">1</span>', false);
+    }
+
+    public function test_private_broadcast_channel_is_limited_to_its_owner(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $channels = Broadcast::getChannels();
+
+        $this->assertArrayHasKey('user.{id}', $channels);
+        $this->assertTrue($channels['user.{id}']($owner, (string) $owner->id));
+        $this->assertFalse($channels['user.{id}']($otherUser, (string) $owner->id));
     }
 
     public function test_admin_can_search_products_by_name_category_or_description(): void

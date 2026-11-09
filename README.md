@@ -44,6 +44,7 @@ Sistem Kasir Toko Jazzel membantu admin dan kasir menjalankan kegiatan toko mela
 Pastikan perangkat pengembangan sudah memiliki:
 
 - PHP 8.2 atau lebih baru beserta ekstensi yang dibutuhkan Laravel.
+- Ekstensi PHP GD untuk pemrosesan gambar produk.
 - Composer.
 - MySQL.
 - Node.js dan npm.
@@ -97,6 +98,77 @@ Untuk menjalankan Vite dalam mode pengembangan, gunakan terminal terpisah:
 npm run dev
 ```
 
+## Deployment Hosting
+
+Langkah berikut berlaku umum untuk server Linux/VPS. Pada shared hosting, gunakan Terminal/cPanel untuk menjalankan perintah yang diizinkan penyedia hosting. Pastikan PHP 8.2+, seluruh ekstensi PHP yang diwajibkan Composer (termasuk GD), Composer, MySQL/MariaDB, dan akses tulis ke folder `storage` serta `bootstrap/cache` tersedia.
+
+1. Arahkan document root domain ke folder `public` aplikasi. Jangan arahkan domain ke root repository.
+2. Pasang dependency PHP production:
+
+   ```sh
+   composer install --no-dev --optimize-autoloader
+   ```
+
+3. Buat `.env` dari `.env.example`, lalu isi konfigurasi server. Minimal:
+
+   ```dotenv
+   APP_ENV=production
+   APP_DEBUG=false
+   APP_URL=https://domain-anda
+   AUTH_REGISTRATION_ENABLED=false
+   DB_CONNECTION=mysql
+   DB_HOST=host-database-dari-provider
+   DB_PORT=3306
+   DB_DATABASE=nama-database
+   DB_USERNAME=user-database
+   DB_PASSWORD=password-database
+   SESSION_DRIVER=file
+   CACHE_STORE=file
+   QUEUE_CONNECTION=sync
+   FILESYSTEM_DISK=public
+   MAIL_MAILER=smtp
+   MAIL_HOST=host-smtp-dari-provider
+   MAIL_PORT=587
+   MAIL_SCHEME=tls
+   MAIL_USERNAME=user-smtp
+   MAIL_PASSWORD=password-smtp
+   MAIL_FROM_ADDRESS=alamat-email-domain
+   ```
+
+   Buat key aplikasi sekali dengan `php artisan key:generate`. Jangan bagikan `.env` atau menyimpan kredensial di Git. Pendaftaran web dan API dinonaktifkan di production secara default; biarkan `AUTH_REGISTRATION_ENABLED=false` agar orang luar tidak dapat membuat akun kasir. Gunakan kredensial database dan SMTP milik server yang sebenarnya. SMTP perlu disetel agar email reset password dapat dikirim.
+
+4. Pasang dependency frontend dan buat aset production:
+
+   ```sh
+   npm ci
+   npm run build
+   ```
+
+   Node.js hanya dibutuhkan saat membangun aset; proses Vite development server tidak dijalankan di production.
+
+5. Siapkan skema dan penyimpanan file:
+
+   ```sh
+   php artisan migrate --force
+   php artisan storage:link
+   php artisan optimize
+   ```
+
+   Jangan jalankan `db:seed` di production tanpa meninjau seeder, karena data contoh bukan data awal yang aman untuk toko.
+
+   Buat akun admin awal secara aman dari terminal server dengan `php artisan app:create-admin`; password dimasukkan melalui prompt tersembunyi, bukan dikirim lewat endpoint publik.
+
+6. Setelah setiap rilis, bersihkan cache konfigurasi lama jika diperlukan dengan `php artisan optimize:clear`, perbarui kode dan aset, lalu jalankan `php artisan optimize` kembali. Pastikan file `public/hot` tidak ada di deployment; file tersebut hanya untuk Vite development.
+
+Jika memilih cache/session/queue berbasis database, pastikan tabel terkait sudah dimigrasikan. Untuk queue asynchronous, jalankan `php artisan queue:work` di bawah process manager seperti Supervisor. Endpoint health Laravel tersedia di `/up`.
+
+### Fitur opsional dan batasan hosting
+
+- **Real-time/Reverb** tidak diperlukan untuk transaksi normal. Untuk mengaktifkannya, isi `REVERB_APP_ID`, `REVERB_APP_KEY`, `REVERB_APP_SECRET`, host, port, scheme, dan `REVERB_ALLOWED_ORIGINS` (domain aplikasi tanpa skema) di `.env`, samakan variabel `VITE_REVERB_*`, lalu build ulang aset. Jalankan `php artisan reverb:start` sebagai service yang dipantau dan konfigurasi reverse proxy WebSocket/HTTPS. Shared hosting mungkin tidak mendukung proses ini.
+- **Pembayaran** QRIS, transfer, dan isi saldo NFC pada aplikasi saat ini masih simulasi. Mengisi key Midtrans saja tidak mengubahnya menjadi pembayaran nyata; integrasi pembayaran dan konfirmasi webhook harus dibuat serta diuji sebelum menerima pembayaran sungguhan.
+- **Cetak struk** memakai konektor printer Windows di sisi server. Hosting Linux tidak dapat otomatis mengakses printer USB yang terpasang pada komputer kasir. Gunakan printer jaringan yang dapat dijangkau server atau aplikasi/bridge lokal di komputer kasir; jangan mengandalkan koneksi printer Windows server di hosting.
+- **Keamanan operasional:** pakai HTTPS, password database yang khusus, backup database dan `storage/app/public`, batasi akses panel hosting, dan jangan gunakan akun contoh atau password bawaan.
+
 ## Cetak Struk
 
 Aplikasi mencetak struk menggunakan printer Windows yang sudah terpasang dan dibagikan. Atur nama printer Windows pada `.env`:
@@ -106,6 +178,10 @@ RECEIPT_PRINTER=POS-80
 ```
 
 Ganti `POS-80` dengan nama printer atau nama share yang sesuai dengan konfigurasi Windows. Tanpa printer yang terhubung, transaksi tetap dapat disimpan, tetapi pencetakan struk tidak akan berhasil.
+
+## Progressive Web App (PWA)
+
+Aplikasi dapat dipasang dari browser yang mendukung PWA setelah diakses melalui HTTPS (localhost dapat digunakan untuk pengembangan). Buka situs, lalu pilih **Install app** atau **Tambahkan ke layar utama** pada menu browser. Service worker hanya menyajikan halaman offline dan ikon saat koneksi putus; halaman akun dan data transaksi tidak disimpan ke cache, sehingga transaksi tetap memerlukan internet.
 
 ## Pengujian
 

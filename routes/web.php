@@ -180,16 +180,12 @@ Route::middleware(['auth', 'verified', 'role:kasir'])->group(function () {
     })->name('cashier.laporan');
 });
 
-Route::get('/dashboard', function () {
-    $products = Product::latest()->get();
+Route::get('/dashboard', function (Request $request) {
+    $destination = $request->user()->role === 'admin'
+        ? 'admin.dashboard'
+        : 'cashier.index';
 
-    return view('dashboard', [
-        'products' => $products,
-        'totalProducts' => $products->count(),
-        'activeProducts' => $products->where('is_active', true)->count(),
-        'lowStockProducts' => $products->where('stock', '<=', 5)->count(),
-        'inventoryValue' => $products->sum(fn (Product $product) => $product->price * $product->stock),
-    ]);
+    return redirect()->route($destination);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware(['auth', 'verified', 'admin'])->group(function () {
@@ -226,7 +222,7 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
             'salesChart' => $salesChart,
             'totalProducts' => $allProducts->count(),
             'activeProducts' => $allProducts->where('is_active', true)->count(),
-            'lowStockProducts' => $allProducts->where('stock', '<=', 5)->count(),
+            'lowStockProducts' => $allProducts->where('stock', '<', 10)->count(),
             'inventoryValue' => $allProducts->sum(fn (Product $product) => $product->price * $product->stock),
         ]);
     })->name('admin.dashboard');
@@ -236,6 +232,12 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
             'products' => Product::latest()->get(),
         ]);
     })->name('admin.barang');
+
+    Route::get('/admin/stok-rendah', function () {
+        return view('admin.stok-rendah', [
+            'products' => Product::query()->where('stock', '<', 10)->orderBy('stock')->orderBy('name')->get(),
+        ]);
+    })->name('admin.stok-rendah');
 
     Route::get('/admin/kasir', function () {
         return view('admin.kasir', [

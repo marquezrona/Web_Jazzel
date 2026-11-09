@@ -119,6 +119,19 @@ class MobileApiTest extends TestCase
             ->assertJsonPath('product_count', 0);
     }
 
+    public function test_mobile_dashboard_counts_active_products_below_ten_as_low_stock(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->createProduct('Stok Sembilan', 9, true);
+        $this->createProduct('Stok Sepuluh', 10, true);
+        $this->createProduct('Stok Rendah Nonaktif', 3, false);
+
+        $this->actingAs($admin)
+            ->getJson('/api/dashboard')
+            ->assertOk()
+            ->assertJsonPath('low_stock_products', 1);
+    }
+
     public function test_mobile_api_rejects_unauthenticated_requests_and_wrong_roles(): void
     {
         $this->getJson('/api/products')->assertUnauthorized();

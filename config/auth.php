@@ -4,6 +4,8 @@ use App\Models\User;
 
 return [
 
+    'registration_enabled' => env('AUTH_REGISTRATION_ENABLED', env('APP_ENV', 'production') !== 'production'),
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Defaults

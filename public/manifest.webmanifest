@@ -1,0 +1,26 @@
+{
+    "id": "/",
+    "name": "Kasir Toko Jazzel",
+    "short_name": "Kasir Jazzel",
+    "description": "Aplikasi kasir dan manajemen toko Jazzel.",
+    "lang": "id-ID",
+    "start_url": "/login",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#f7f3f3",
+    "theme_color": "#8d2a22",
+    "icons": [
+        {
+            "src": "/assets/img/pwa-icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/assets/img/pwa-icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

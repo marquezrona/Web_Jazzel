@@ -250,7 +250,7 @@
                         <span class="stock-name">{{ $product->name }}</span>
                         <span class="stock-category">{{ $product->category ?? 'Umum' }}</span>
                     </div>
-                    <span class="stock-pill {{ $product->stock <= 5 ? 'low' : '' }}">{{ $product->stock }} stok</span>
+                    <span class="stock-pill {{ $product->stock < 10 ? 'low' : '' }}">{{ $product->stock }} stok</span>
                 </div>
             @empty
                 <p class="py-3 mb-0 text-center text-secondary small">Belum ada barang yang terdaftar.</p>

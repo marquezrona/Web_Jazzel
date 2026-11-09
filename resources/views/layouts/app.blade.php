@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        @include('partials.pwa-head')
 
         <title>{{ config('app.name', 'Laravel') }}</title>
         <link rel="icon" type="image/png" sizes="256x256" href="{{ asset('assets/img/jazzel-favicon.png?v=2') }}">
@@ -34,13 +35,14 @@
             </main>
         </div>
 
-        <!-- Skrip Listener Laravel Echo & Reverb yang Ditambahkan -->
         <script>
-            window.Echo.private('user.{{ auth()->id() }}')
-                .listen('OrderPlaced', (e) => {
-                    alert(`Order #${e.order_id} telah ditempatkan! Total: Rp ${e.total}`);
-                    console.log('Order Placed:', e);
-                });
+            if (window.Echo) {
+                window.Echo.private('user.{{ auth()->id() }}')
+                    .listen('.order.placed', (event) => {
+                        alert(`Order #${event.order_id} telah ditempatkan! Total: Rp ${event.total}`);
+                    });
+            }
         </script>
+        <script src="{{ asset('js/register-service-worker.js') }}" defer></script>
     </body>
 </html>

@@ -1,22 +1,21 @@
 import axios from 'axios';
-window.axios = axios;
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
 
+window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-/**
- * Konfigurasi Laravel Echo & Reverb (Ditambahkan di bawah Axios)
- */
-import Echo from 'laravel-echo';
+const reverbKey = import.meta.env.VITE_REVERB_APP_KEY;
 
-window.Pusher = require('pusher-js');
-
-window.Echo = new Echo({
-    broadcaster: 'reverb',
-    key: 'your-pusher-key', // bisa kosong untuk development
-    wsHost: window.location.hostname,
-    wsPort: 8080,
-    forceTLS: false,
-    encrypted: false,
-    disableStats: true,
-    enabledTransports: ['ws', 'wss'],
-});
+if (reverbKey) {
+    window.Pusher = Pusher;
+    window.Echo = new Echo({
+        broadcaster: 'reverb',
+        key: reverbKey,
+        wsHost: import.meta.env.VITE_REVERB_HOST || window.location.hostname,
+        wsPort: Number(import.meta.env.VITE_REVERB_PORT || 80),
+        wssPort: Number(import.meta.env.VITE_REVERB_PORT || 443),
+        forceTLS: (import.meta.env.VITE_REVERB_SCHEME || 'https') === 'https',
+        enabledTransports: ['ws', 'wss'],
+    });
+}

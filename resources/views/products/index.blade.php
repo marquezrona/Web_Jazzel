@@ -201,7 +201,7 @@
                                 <td>{{ $product->category ?: 'Tanpa kategori' }}</td>
                                 <td class="product-price">Rp {{ number_format($product->price, 0, ',', '.') }}</td>
                                 <td>
-                                    <span class="stock-badge {{ $product->stock <= 5 ? 'low' : '' }}">{{ $product->stock }}</span>
+                                    <span class="stock-badge {{ $product->stock < 10 ? 'low' : '' }}">{{ $product->stock }}</span>
                                 </td>
                                 <td>
                                     <div class="product-actions">

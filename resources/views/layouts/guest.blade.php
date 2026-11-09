@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        @include('partials.pwa-head')
 
         <title>{{ config('app.name', 'Laravel') }}</title>
         <link rel="icon" type="image/png" sizes="256x256" href="{{ asset('assets/img/jazzel-favicon.png?v=2') }}">
@@ -27,5 +28,6 @@
                 {{ $slot }}
             </div>
         </div>
+        <script src="{{ asset('js/register-service-worker.js') }}" defer></script>
     </body>
 </html>

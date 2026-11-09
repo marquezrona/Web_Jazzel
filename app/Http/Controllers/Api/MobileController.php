@@ -36,7 +36,7 @@ class MobileController extends Controller
             'transaction_count' => (clone $sales)->count(),
             'product_count' => (clone $products)->count(),
             'active_product_count' => (clone $products)->where('is_active', true)->count(),
-            'low_stock_products' => (clone $products)->where('is_active', true)->where('stock', '<=', 5)->count(),
+            'low_stock_products' => (clone $products)->where('is_active', true)->where('stock', '<', 10)->count(),
             'recent_sales' => (clone $sales)->with('customer')->latest()->limit(5)->get(),
             'store' => StoreSetting::current(),
         ]);

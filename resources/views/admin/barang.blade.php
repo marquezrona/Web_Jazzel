@@ -24,7 +24,7 @@
                 </div>
                 <div class="col-sm-4">
                     <span class="text-secondary small text-uppercase fw-semibold">Stok Rendah</span>
-                    <div class="fs-4 fw-bold mt-1">{{ $products->where('stock', '<=', 5)->count() }}</div>
+                    <div class="fs-4 fw-bold mt-1">{{ $products->where('stock', '<', 10)->count() }}</div>
                 </div>
             </div>
         </div>
