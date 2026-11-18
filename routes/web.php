@@ -199,7 +199,7 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::put('/admin/pengaturan/akun', [StoreSettingController::class, 'updateAccount'])->name('admin.pengaturan.akun');
     Route::post('/admin/kasir', [CashierController::class, 'store'])->name('admin.kasir.store');
 
-    Route::get('/admin', function () {
+    Route::get('/admin/dashboard', function () {
         $allProducts = Product::query()->get();
         $chartStart = today()->subDays(6);
         $dailySales = Sale::query()
